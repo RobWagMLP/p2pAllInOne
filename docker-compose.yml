@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  reverse_proxy:
+    container_name: p2p-reverse-proxy
+    restart: unless-stopped
+    ports:
+      - 8080:80
+    build:
+      context: ./p2pFrontend/p2pfr
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - backend
+    networks:
+      - p2p-bridge
+  flyway:
+    container_name: p2p-flyway
+    image: flyway/flyway:latest
+    command: -url=jdbc:postgresql://database:5432/pssrv -user=postgres -password=pwpostgres -schemas=public -locations="filesystem:/flyway/sql/data, filesystem:/flyway/sql/ddl, filesystem:/flyway/sql/sp" -connectRetries=60 migrate
+    volumes:
+      - ./p2p/database/sql/data:/flyway/sql/data
+      - ./p2p/database/sql/ddl:/flyway/sql/ddl
+      - ./p2p/database/sql/sp:/flyway/sql/sp
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - p2p-bridge
+  backend:
+    container_name: p2p-backend
+    restart: unless-stopped
+    build:
+      context: ./p2p
+    expose:
+        - 4430
+    ports:
+      - 4430:4430
+    env_file:
+      - .env
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - p2p-bridge
+  database:
+    container_name: p2p-database
+    image: postgres:15-alpine
+    restart: unless-stopped
+    expose:
+      - 5432
+    env_file:
+      - .env
+    volumes:
+      - ./pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      interval: 5s
+      timeout: 30s
+      retries: 3
+    networks:
+      - p2p-bridge
+
+networks:
+  p2p-bridge:
+    driver: bridge

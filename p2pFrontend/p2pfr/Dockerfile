@@ -1,0 +1,30 @@
+FROM node:15.11.0-slim AS build
+
+ARG REACT_APP_ICE_SERVER_REQ_HOST_ARG=https://ecop2p.metered.live/api/v1/turn/
+ARG REACT_APP_ICE_SERVER_REQ_API_KEY_ARG=f23dd71388fa7519f92ef78b20841e01a982
+ARG REACT_APP_WEBSOCKET_HOST_ARG=ws://127.0.0.1:8080/api/
+ARG REACT_APP_APP_ENV_ARG=local
+
+ENV REACT_APP_ICE_SERVER_REQ_HOST=${REACT_APP_ICE_SERVER_REQ_HOST_ARG}
+ENV REACT_APP_ICE_SERVER_REQ_API_KEY=${REACT_APP_ICE_SERVER_REQ_API_KEY_ARG}
+ENV REACT_APP_WEBSOCKET_HOST=${REACT_APP_WEBSOCKET_HOST_ARG}
+ENV REACT_APP_APP_ENV=${REACT_APP_APP_ENV_ARG}
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# Get all dependencies
+RUN npm install
+
+# Get all sources
+COPY . .
+
+# Build frontend
+RUN npm run build:docker
+
+FROM nginx:alpine AS runtime
+
+COPY --from=build /app/build /usr/share/nginx/html
+
+EXPOSE 80
