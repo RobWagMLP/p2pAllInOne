@@ -2,21 +2,13 @@ import React, { PureComponent, ReactElement, SyntheticEvent } from "react";
 import {  StyledTextField,  ChatWrapper, FileBox, MessageBox, Message, Name, Text, StyledLink } from "../Style/baseStyle.css";
 import { ChatMessage } from "../Signaling/interfaces";
 import { ChatMessageTypeEnum } from "../Signaling/enums";
+import { Colors } from "../Signaling/consts";
 
 
 interface IProps {
     messages: Array<ChatMessage>;
     onNewMessage: (message: string) => void;
 }
-
-const Colors = [
-    '#5A5A5A',
-    '#00008b',
-    '#8b0000',
-    '#9400d3',
-    '#006400',
-    '#d2691e'
-]
 
 export class ChatComponent extends PureComponent<IProps> {
 

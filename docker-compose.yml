@@ -7,7 +7,7 @@ services:
     ports:
       - 8080:80
     build:
-      context: ./p2pFrontend/p2pfr
+      context: ./p2pFrontend
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
     depends_on:

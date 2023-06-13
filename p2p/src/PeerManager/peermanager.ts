@@ -14,7 +14,7 @@ export class PeerManager {
     addUser(user: User, req: IncomingMessage): boolean {
         this.userMap.forEach((value: User, key: IncomingMessage) => {
             if(value.person_id === user.person_id) {
-                this.userMap.delete(key);
+                return false;
             }
         });
         this.userMap.set(req, user);

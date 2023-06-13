@@ -1,9 +1,9 @@
 import React, { ReactElement, SyntheticEvent } from "react";
-import { BottomArea, HoverBox, IconWrapperBig, IconWrapperSmall, InfoField, MenuItemWrapper, OffsetVideoArea, RightArea, RightMenuArea, SmallInfoField, SmallVideo, SmallVideoWrapper, VideoArea, VideoElement, VideoHeader, VideoMainGrid, VideoWrapper } from "../Style/baseStyle.css";
+import { BottomArea, Circle, HoverBox, IconWrapperBig, IconWrapperSmall, InfoField, MenuItemWrapper, OffsetVideoArea, RightArea, RightMenuArea, SmallInfoField, SmallVideo, SmallVideoWrapper, VideoArea, VideoElement, VideoHeader, VideoMainGrid, VideoWrapper } from "../Style/baseStyle.css";
 import { P2PHandler } from "../Signaling/p2pHandler";
 import { Storage } from "../Helper/storage";
 import { audioOn, audioOff, cameraOn, cameraOff, settings, shareScreen, uploadFile, chat, stop, stopShareScreen } from "../Helper/icons";
-import { PEER_CHAT_MESSAGE } from "../Signaling/consts";
+import { Colors, PEER_CHAT_MESSAGE } from "../Signaling/consts";
 import { ChatComponent } from "./ChatComponent";
 import { ChatMessage } from "../Signaling/interfaces";
 import { ChatMessageTypeEnum } from "../Signaling/enums";
@@ -15,6 +15,7 @@ interface PeerData {
     video?: boolean;
     screenShared?: boolean;
     nameTransferd?: boolean;
+    mainDisplay?: boolean;
 }
 
 interface IProps {
@@ -22,7 +23,6 @@ interface IProps {
 }
 
 interface IState {
-    connections: Map<number, RTCPeerConnection>;
     streams:      Map<number, PeerData>;
     mediaEnabled: {cam: boolean, audio: boolean};
     deviceAndStream: {devices: Array<MediaDeviceInfo>;
@@ -46,6 +46,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
     private p2pHandler  = Storage.getInstance().getP2pHandler();
     private maxMainView = 4;
+    private remuteVideo: boolean = false;
 
     constructor(props: IProps) {
         super(props);
@@ -53,11 +54,14 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         const deviceAndStream   = Storage.getInstance().getMediaDeviceAndStream();
         const username          = Storage.getInstance().getUserName();
 
+        if(deviceAndStream.stream.getVideoTracks() == null || deviceAndStream.stream.getVideoTracks().length === 0) {
+            deviceAndStream.stream = this.createDummyTrack(deviceAndStream.stream);
+        }
+
         this.state = {
             username: username,
             mediaEnabled: mediaEnabled,
             deviceAndStream: deviceAndStream,
-            connections: this.p2pHandler.connections,
             streams: new Map<number, PeerData>(),
             screenshared: false,
             mainVideoArea: [],
@@ -97,6 +101,72 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
        this.close();
     }
 
+    createDummyTrack(stream: MediaStream) {
+        let canvas = document.createElement("canvas");
+    
+        canvas.getContext('2d').fillRect(0, 0, 640, 480);
+    
+        let dummystream = canvas.captureStream();
+        
+        let dummyVideo  = dummystream.getVideoTracks()[0];
+
+        dummyVideo.enabled = false;
+        
+        const newStream = new MediaStream([stream.getAudioTracks()[0], dummyVideo]);
+
+        return newStream;
+    }
+
+    toggleVideoToMain(person_id: number) {
+        const streams = this.state.streams;
+        const stream = streams.get(person_id);
+
+        let mainView = this.state.mainVideoArea;
+        let offView = this.state.offsetVideoArea;
+
+        if(stream) {
+            if(stream.mainDisplay === false) {
+                             
+                offView = offView.concat(mainView);
+                const idx = offView.indexOf(person_id);
+                mainView = [].concat(offView.splice(idx, 1));
+                
+                stream.mainDisplay = true;
+                this.maxMainView = 1;
+
+                for(const o of offView) {
+                    const streamToOff = streams.get(o);
+                    if(streamToOff) {
+                        streamToOff.mainDisplay = false;
+                        streams.set(o, streamToOff);
+                    }
+                }
+            } else {
+                if(offView.length === 0) {
+                    return;
+                }
+                console.log(offView);
+                for(let i = offView.length - 1; i >= 0; i--) {
+                    mainView = mainView.concat(offView.splice(i, 1));
+
+                    if(mainView.length > 3) {
+                        break;
+                    }
+
+                    stream.mainDisplay = false;
+                    this.maxMainView = 4;
+                }
+            }
+        }
+        streams.set(person_id, stream);
+
+        this.setState({
+            streams: streams,
+            mainVideoArea: mainView,
+            offsetVideoArea: offView
+        })
+    }
+
     initP2P() {
         this.p2pHandler.setNotify((message: string) => {
             console.log(message);
@@ -125,35 +195,30 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             }
         });
 
+        this.p2pHandler.setIceCandidateGatheredcallback((person_id: number) => {
+            console.log("I am here at least");
+            const streams = this.state.streams;
+            let data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
+
+            data = this.sendState(person_id, data);
+            
+            if(this.p2pHandler.isPolite(person_id)) {
+                this.p2pHandler.setupChatChannel(person_id);
+            }
+            streams.set(person_id, data);
+
+            this.setState({
+                streams: streams
+            })
+    })
+
         this.p2pHandler.setOnTrackcallback((person_id: number, ev: RTCTrackEvent) => {
             const streams = this.state.streams;
             const trackType = ev.track.kind;
-
-            ev.track.onmute = (ev: Event) => {
-                if(trackType === 'audio') {
-                    this.onMutePeerAudio(false, person_id);
-                } else {
-                    this.onMutePeerVideo(false, person_id)
-                }
-            }
-            
-            ev.track.onunmute = (ev: Event) => {
-                if(trackType === 'audio') {
-                    this.onMutePeerAudio(true, person_id);
-                } else {
-                    this.onMutePeerVideo(true, person_id)
-                }
-            }
          
             let data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
 
             data.stream = ev.streams[0];
-
-            if(trackType === 'audio') {
-                data.audio = ev.track.enabled;
-            } else if(trackType === 'video') {
-                data.video = ev.track.enabled
-            }
 
             const video: HTMLVideoElement = document.getElementById(`video_stream_${person_id}`) as HTMLVideoElement;
 
@@ -162,9 +227,10 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             }
 
             const areas = this.handleVideoPush(person_id);
+            data.mainDisplay = false;
 
             streams.set(person_id, data);
-
+            
             this.setState({
                 streams: streams,
                 mainVideoArea: areas.mainVideoArea,
@@ -191,7 +257,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                     offsetVideoArea: areas.offsetVideoArea,
                     senders: senders
                 })
-            }
+            } 
         })
 
         this.p2pHandler.setOnNewConnectioncallback(async (con: RTCPeerConnection, person_id) =>  {
@@ -214,14 +280,12 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
                 let data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
 
-                data = this.sendState(person_id, data);
-
                 streams.set(person_id, data);
 
-                if(this.p2pHandler.isPolite(person_id)) {
-                    this.p2pHandler.setupChatChannel(person_id);
-                }
-
+                this.setState({
+                    streams: streams
+                })
+               
                 this.setState({
                     mainVideoArea: areas.mainVideoArea,
                     offsetVideoArea: areas.offsetVideoArea,
@@ -248,13 +312,19 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                 let   entry = streamData.has(person_id) ? streamData.get(person_id) : {};
 
                 let canShareScreen = this.state.canShareScreen;
-
                 if(data['name']) {
                     entry.name = data['name'];
+
                 }
-                if(data['screenShared']) {
+                if(data['screenShared'] != null) {
                     entry.screenShared = data['screenShared'];
                     canShareScreen = !data['screenShared'];
+                }
+                if(data['audio'] !=  null) {
+                    entry = this.onMutePeerAudio(data['audio'], entry);
+                }
+                if(data['video'] !=  null) {
+                    entry = this.onMutePeerVideo(data['video'] || data['screenShared'] === true, entry);
                 }
 
                 entry = this.sendState(person_id, entry, false);
@@ -308,9 +378,9 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             return out;
         }
         if(out.mainVideoArea.length >= this.maxMainView) {
-            out.offsetVideoArea.push(person_id)
+            out.offsetVideoArea.push(person_id);
         } else {
-            out.mainVideoArea.push(person_id)
+            out.mainVideoArea.push(person_id);
         }
 
         return out;
@@ -318,7 +388,10 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
     sendState(person_id: number, entry: PeerData, sendOnpolite: boolean = true): PeerData {
         if(entry.nameTransferd !== true && this.p2pHandler.isPolite(person_id) === sendOnpolite) {
-            const sendObj = JSON.stringify({name: this.state.username, screenShared: this.state.screenShared});
+            const sendObj = JSON.stringify({name: this.state.username, 
+                                            screenShared: this.state.screenShared, 
+                                            video: this.state.deviceAndStream.stream.getVideoTracks()[0].enabled,
+                                            audio: this.state.deviceAndStream.stream.getAudioTracks()[0].enabled});
             this.p2pHandler.sendInfo(sendObj, person_id);
 
             entry.nameTransferd = true;
@@ -346,40 +419,38 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         return out;
     }
 
-    onMutePeerAudio(audio: boolean, person_id: number) {
-        const streams = this.state.streams;
-        if(!streams || !streams.has(person_id)) {
-            return;
-        }
+    onMutePeerAudio(audio: boolean, data: PeerData): PeerData {
 
-        const data = streams.get(person_id);
         data.audio = audio;
-        streams.set(person_id, data);
-        
-        this.setState({
-            streams: streams
-        })
+
+        if(data.stream != null && data.stream.getAudioTracks().length > 0) {
+            data.stream.getAudioTracks()[0].enabled = audio;
+        }
+        return data;
     }
 
-    onMutePeerVideo(video: boolean, person_id: number) {
-        const streams = this.state.streams;
-        if(!streams || !streams.has(person_id)) {
-            return;
-        }
-        const data = streams.get(person_id);
-        data.video = video;
-        streams.set(person_id, data);
+    onMutePeerVideo(video: boolean, data: PeerData): PeerData {
 
-        this.setState({
-            streams: streams
-        })
+        data.video = video;
+
+        if(data.stream != null && data.stream.getVideoTracks().length > 0) {
+            data.stream.getVideoTracks()[0].enabled = video;
+        }
+        return data;
     }
 
     close() {
         this.p2pHandler.disconnectFromPeers();
 
-        for(const o of this.state.connections) {
-            o[1].close();
+        for(const o of this.state.streams) {
+            this.state.streams.delete[o[0]];
+        }
+        this.p2pHandler.reset();
+    }
+
+    broadCastDeviceInfo(fields: {}) {
+        for(const a of this.p2pHandler.connections) {
+            this.p2pHandler.sendInfo(JSON.stringify(fields), a[0]);
         }
     }
 
@@ -388,11 +459,12 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
         stream.getAudioTracks()[0].enabled = audio;
 
-        for(const o of this.state.connections) {
+       /* for(const o of this.p2pHandler.connections) {
             const transc = o[1].getTransceivers();
             const mode = audio ? 'sendrecv' : 'recvonly';
             transc[0].direction = mode;
-        }
+        }*/
+        this.broadCastDeviceInfo({audio: audio, video: stream.getVideoTracks()[0].enabled, screenShared: this.state.screenShared});
 
         this.setState({
             mediaEnabled: {cam: this.state.mediaEnabled.cam, audio: audio}
@@ -402,14 +474,26 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
     onMuteVideo(video: boolean) {
         const stream = this.state.deviceAndStream.stream;
-        
+
         stream.getVideoTracks()[0].enabled = video;
+
+        /*for(const o of this.p2pHandler.connections) {
+           this.sendSingleTranceiver(o[1], video);
+        }*/
+
+        this.broadCastDeviceInfo({audio: stream.getAudioTracks()[0].enabled, video: video, screenShared: this.state.screenShared});
 
         this.setState({
             mediaEnabled: {cam: video, audio: this.state.mediaEnabled.audio}
         });
         
     }
+
+    sendSingleTranceiver(connection: RTCPeerConnection, video: boolean) {
+        const transc = connection.getTransceivers();
+        const mode = video ? 'sendrecv' : 'recvonly';
+        transc[1].direction = mode;
+    } 
 
     startConnecting() {
         try {
@@ -432,31 +516,61 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         }
     }
 
+    getInitials(name: string): string {
+        let displayName: string = "";
+        const words = name.split(" ");
+
+        for(let i = 0; i < words.length; i++){
+            displayName += words[i].charAt(0).toUpperCase();
+            if(displayName.length > 2) {
+                break;
+            }
+        }
+        if(displayName.length < 2 && name.length > 1) {
+            displayName += name.charAt(1);
+        }
+
+        return displayName;
+    }
+
     setupVideoArea() : Array<ReactElement> {
         const out = [];
         const participans = this.state.mainVideoArea.length;
 
-        const width = participans > 1 ? '35vw' : '100%';
-        const maxHeight = participans > 2 ? '40vh': '80vh';
+        const width  = participans > 1 ? 'calc(50% - 32px)' : 'calc(100% - 32px)';
+        const height = participans > 2 ? 'calc(50% - 32px)' : 'calc(100% - 32px)';
 
         for(const person_id of this.state.mainVideoArea) {
 
             const stream = this.state.streams.get(person_id);
-          
+            const name  = stream.name != null ? stream.name : "Anon";
+            const display = stream.video === false ? "flex" : "none";
+            const color = Colors[name.length%6];
+            let displayName = "";
+
+            if(stream.video === false) {
+                displayName = this.getInitials(name);
+            }
+
             out.push(
                 <VideoWrapper
-                    width={participans > 1 ? '35vw' : '90%'}>
+                    onDoubleClick={(event: SyntheticEvent) => {
+                        event.stopPropagation();
+                        event.preventDefault();
+                        this.toggleVideoToMain(person_id);
+                    }}
+                    height={height}
+                    width={width}
+                    display={display}
+                    color={color}
+                    text={displayName}>
                     <VideoElement
                         ref={() => {this.setVideoSrcObject(person_id)}}
                         id={`video_stream_${person_id}`}
                         key={`video_stream_${person_id}`}
                         autoPlay={true}
-                        width={width}
-                        maxheight={maxHeight}
-                        />
+                       />                      
                     <InfoField>
-                        {stream != null ? stream.name : person_id}
-                        {" "}
                         {stream != null && stream.audio === false ? <IconWrapperBig> { audioOff() }</IconWrapperBig>: null}
                     </InfoField>
                 </VideoWrapper>
@@ -469,15 +583,17 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         const out = [];
 
         out.push(
-            <SmallVideoWrapper>
+            <SmallVideoWrapper
+                display={this.state.deviceAndStream.stream.getVideoTracks()[0].enabled ? 'none' : 'flex'}
+                color={Colors[this.state.username.length%6]}
+                text={this.getInitials(this.state.username)}
+            >
                 <SmallVideo 
                     id="video_stream_self"
                     key="video_stream_self"
                     autoPlay={true}
                 />
                  <SmallInfoField>
-                    {this.state.username}
-                    {" "}
                     {this.state.mediaEnabled.audio === false ? <IconWrapperSmall> { audioOff() } </IconWrapperSmall>: null}
                 </SmallInfoField>
             </SmallVideoWrapper>
@@ -485,9 +601,24 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
         for(const person_id of this.state.offsetVideoArea) {
             const stream = this.state.streams.get(person_id);
+            const name  = stream.name != null ? stream.name : "Anon";
+            const display = stream.video === false ? "flex" : "none";
+            const color = Colors[name.length%6];
+            let displayName = "";
 
+            if(stream.video === false) {
+                displayName = this.getInitials(name);
+            }
             out.push(
-                <SmallVideoWrapper>
+                <SmallVideoWrapper
+                    display={display}
+                    color={color}
+                    text={displayName}
+                    onDoubleClick={(event: SyntheticEvent) => {
+                    event.stopPropagation();
+                    event.preventDefault();
+                    this.toggleVideoToMain(person_id);
+                }}>
                     <SmallVideo 
                         ref={() => {this.setVideoSrcObject(person_id)}}
                         id={`video_stream_${person_id}`}
@@ -574,7 +705,6 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         const videoStream = new MediaStream();
 
         videoStream.addTrack(stream.getVideoTracks()[0]);
-
         videoSelf.srcObject = videoStream;
 
     }
@@ -590,6 +720,11 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                 this.setSelfVideoTrack(captureStream);
 
                 this.swapVideoStreams(captureStream);
+
+                if(!this.state.deviceAndStream.stream.getVideoTracks()[0].enabled) {
+                    this.broadCastDeviceInfo({video: true, audio: this.state.deviceAndStream.stream.getAudioTracks()[0].enabled});
+                    this.remuteVideo = true;
+                }
 
                 this.setState( {
                     screenShared: true,
@@ -607,6 +742,10 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
             this.swapVideoStreams(this.state.deviceAndStream.stream);
 
+            if(this.remuteVideo) {
+                this.broadCastDeviceInfo({video: false, audio: this.state.deviceAndStream.stream.getAudioTracks()[0].enabled});
+                this.remuteVideo = false;
+            }
             this.setState( {
                 screenShared: false,
             })
@@ -652,7 +791,9 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                             {this.state.mediaEnabled.audio ? audioOn() : audioOff()}
                             </HoverBox>
                         <HoverBox onClick={() => {
-                            this.onMuteVideo(!this.state.mediaEnabled.cam)
+                            if(!this.state.screenShared) {
+                                this.onMuteVideo(!this.state.mediaEnabled.cam)
+                            }
                             }}>
                             {this.state.mediaEnabled.cam ? cameraOn() : cameraOff()}
                         </HoverBox>

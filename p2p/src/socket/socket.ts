@@ -74,7 +74,7 @@ export class Socket {
                 return false;
             }
 
-        } else if(info.req.url.includes("?") && process.env.ENV === 'local') { // only for local testing
+        } else if(info.req.url.includes("?") && process.env.ENV !== 'prod') { // only for local testing
             try {
                 userObj["person_id"] = person_id;
                 //userObj = JSON.parse(info.req.headers['user-data'] as string);

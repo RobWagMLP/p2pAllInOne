@@ -324,8 +324,34 @@ export const RightMenuArea = styled.div`
 `;
 
 
-export const VideoWrapper = styled.div<{width: string}>`
+export const VideoWrapper = styled.div<{width: string, height: string, text: string, color: string, display: string}>`
     width: ${props => props.width};
+    height: ${props => props.height};
+    max-height: ${props => props.height};
+    min-height: ${props => props.height};
+    border-bottom: 1px solid white;
+    border-radius: 4px;
+    margin: 16px;
+    position: relative;
+    :before {
+        position: absolute;
+        background-color: ${props => props.color};
+        content: '${props => props.text}';
+        font-size: 10vw;
+        font-weight: 500;
+        margin: auto;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        color: white;
+        right: 0;
+        border-radius: 50%;
+        width: 20vw;
+        height: 20vw;
+        display: ${props => props.display};;
+        justify-content: center;
+        align-items: center;
+    }
 `;
 
 export const InfoField = styled.div` 
@@ -356,26 +382,43 @@ export const SmallInfoField = styled(InfoField)`
     border: none;
 `;
 
-export const VideoElement = styled.video<{width: string, maxheight: string}>`
-    border-bottom: 1px solid white;
-    border-radius: 4px;
-    margin: 16px;
-    padding: 4px;
-    width: ${props => props.width};
-    max-height: ${props => props.maxheight};
+export const VideoElement = styled.video`
+    max-width: 100% !important;
+    height: 100% !important;
 `;
 
-export const SmallVideoWrapper = styled.div`
+export const SmallVideoWrapper = styled.div<{text: string, color: string, display: string}>`
     display: flex;
     flex-direction: column;
+    width: 90%;
+    max-height: 50%;
+    position: relative;
+    :before {
+        position: absolute;
+        background-color: ${props => props.color};
+        content: '${props => props.text}';
+        font-size: 2vw;
+        font-weight: 350;
+        margin: auto;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        color: white;
+        right: 0;
+        border-radius: 50%;
+        width: 5vw;
+        height: 5vw;
+        display: ${props => props.display};;
+        justify-content: center;
+        align-items: center;
+    }
 `;
 
 export const SmallVideo = styled.video`
-    border: 1px solid white;
     border-radius: 4px;
     margin: 16px;
-    max-width: 80%;
-    min-width: 30%;
+    max-width: 100% !important;
+    height: 100% !important;
  `;
 
  export const MenuItemWrapper = styled.div`
@@ -388,4 +431,19 @@ export const SmallVideo = styled.video`
     border: 4px solid ${theme.font.heading_color};
     width: 50%;
     height: 32px;
+ `;
+
+ export const Circle = styled.div<{color: string}>`
+    position: absolute;
+    margin: auto;
+    width: 30%;
+    height: 30%;
+    border-radius: 50%;
+    left: 0;
+    bottom; 0;
+    background-color: ${props => props.color};
+    font-size: 30px;
+    font-weight: 500;
+    z-index: 5000;
+    text-align: center;
  `;
