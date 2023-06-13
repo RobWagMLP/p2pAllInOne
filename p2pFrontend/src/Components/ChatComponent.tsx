@@ -43,6 +43,9 @@ export class ChatComponent extends PureComponent<IProps> {
         )
         let i = 0;
         for(const o of this.props.messages) {
+            if(o.name == null) {
+                o.name = "Name_not_received";
+            }
             out.push(
                 <Message key={o.name + i}>
                     <Name

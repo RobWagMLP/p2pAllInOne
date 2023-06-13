@@ -145,7 +145,6 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                 if(offView.length === 0) {
                     return;
                 }
-                console.log(offView);
                 for(let i = offView.length - 1; i >= 0; i--) {
                     mainView = mainView.concat(offView.splice(i, 1));
 
@@ -196,16 +195,20 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         });
 
         this.p2pHandler.setIceCandidateGatheredcallback((person_id: number) => {
-            console.log("I am here at least");
             const streams = this.state.streams;
             let data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
-
+            if(data.nameTransferd === true) {
+                //return;
+            }
             data = this.sendState(person_id, data);
             
             if(this.p2pHandler.isPolite(person_id)) {
                 this.p2pHandler.setupChatChannel(person_id);
             }
+
+            data.nameTransferd = true;
             streams.set(person_id, data);
+     
 
             this.setState({
                 streams: streams
@@ -214,19 +217,19 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
 
         this.p2pHandler.setOnTrackcallback((person_id: number, ev: RTCTrackEvent) => {
             const streams = this.state.streams;
-            const trackType = ev.track.kind;
          
             let data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
 
             data.stream = ev.streams[0];
 
-            const video: HTMLVideoElement = document.getElementById(`video_stream_${person_id}`) as HTMLVideoElement;
+           /* const video: HTMLVideoElement = document.getElementById(`video_stream_${person_id}`) as HTMLVideoElement;
 
             if(video) {
                 video.srcObject = data.stream;
-            }
+            }*/
 
             const areas = this.handleVideoPush(person_id);
+            
             data.mainDisplay = false;
 
             streams.set(person_id, data);
@@ -507,6 +510,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
     }
 
     setVideoSrcObject(person_id: number) {
+        //console.log(this.state.streams.get(person_id));
         if(this.state.streams.has(person_id)) {
             const stream = this.state.streams.get(person_id).stream;
             const element: HTMLVideoElement = document.getElementById(`video_stream_${person_id}`) as HTMLVideoElement;

@@ -142,7 +142,6 @@ export class P2PHandler {
         }
 
         connection.onicegatheringstatechange = (ev: Event) => {
-            console.log(connection.iceGatheringState);
             if(connection.iceGatheringState === 'complete') {
                 this.iceCandidateGatheredEvent(person_id);
             }
@@ -270,8 +269,6 @@ export class P2PHandler {
         if(!this.initialized) {
             this.iceServer = await getIceServer();
             this.iceServer.splice(2, this.iceServer.length - 2);
-            
-            console.log(this.iceServer);
 
             this.signaling = new Signaling();
 
@@ -335,7 +332,6 @@ export class P2PHandler {
             });
 
             this.signaling.addIceCandidateListener(async (candidate: RTCIceCandidateInit | RTCIceCandidate, person_id: number) => {
-                this.notify(`ice candidate received from person ${person_id}`);
                 
                 if(this.connections.has(person_id)) {
                     const connection = this.connections.get(person_id);
