@@ -10,16 +10,19 @@ export interface RequestRoom extends SocketMessage {
 
 export interface SingleOffer extends SocketMessage {
     offer: RTCSessionDescriptionInit;
-    person_id_receive: number
+    person_id_receive: number,
+    name?: string;
 }
 
 export interface Offer extends SocketMessage {
     offer: RTCSessionDescriptionInit;
+    name?: string;
 }
 
 export interface Answer extends SocketMessage {
     answer: RTCSessionDescriptionInit;
     person_id: number;
+    name?: string;
 }
 
 export interface RecIceCandidate extends SocketMessage {

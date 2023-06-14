@@ -195,25 +195,9 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         });
 
         this.p2pHandler.setIceCandidateGatheredcallback((person_id: number) => {
-            const streams = this.state.streams;
-            let data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
-            if(data.nameTransferd === true) {
-                //return;
-            }
-            data = this.sendState(person_id, data);
             
-            if(this.p2pHandler.isPolite(person_id)) {
-                this.p2pHandler.setupChatChannel(person_id);
-            }
-
-            data.nameTransferd = true;
-            streams.set(person_id, data);
-     
-
-            this.setState({
-                streams: streams
-            })
-    })
+            console.log("Ice candidates gathered");    
+        })
 
         this.p2pHandler.setOnTrackcallback((person_id: number, ev: RTCTrackEvent) => {
             const streams = this.state.streams;
@@ -263,9 +247,40 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             } 
         })
 
-        this.p2pHandler.setOnNewConnectioncallback(async (con: RTCPeerConnection, person_id) =>  {
+        this.p2pHandler.setonNameReceivedcallback((name: string, person_id: number) => {
+            const streams = this.state.streams;
+
+            let data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
+            
+            data.name = name;
+
+            streams.set(person_id, data);
+            this.setState({
+                streams: streams
+            })
+        })
+
+        this.p2pHandler.setOnInfoChannelOpencallback((person_id: number) => {
+            console.log("info channel open");
+            const streams = this.state.streams;
+            let data: PeerData = streams.has(person_id) ? streams.get(person_id) : {};
+
+            data = this.sendState(person_id, data);
+
+            streams.set(person_id, data);
+            this.setState({
+                streams: streams
+            })
+        })
+
+        this.p2pHandler.setOnNewConnectioncallback(async (con: RTCPeerConnection, person_id, fromOffer: boolean) =>  {
 
                 const stream =  this.state.deviceAndStream.stream;
+
+                if(!fromOffer) {
+                    this.p2pHandler.setupChatChannel(person_id);
+                    this.p2pHandler.setupInfoChannel(person_id);
+                }
 
                 const senders = this.setSingleStream(con, stream);
 
@@ -310,7 +325,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         this.p2pHandler.setInfoReceivedCallback((rawJson: string, person_id: number) => {
             try{
                 const data = JSON.parse(rawJson);
-
+                console.log("ive got a message");
                 const streamData = this.state.streams;
                 let   entry = streamData.has(person_id) ? streamData.get(person_id) : {};
 
@@ -330,7 +345,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                     entry = this.onMutePeerVideo(data['video'] || data['screenShared'] === true, entry);
                 }
 
-                entry = this.sendState(person_id, entry, false);
+                //entry = this.sendState(person_id, entry);
 
                 streamData.set(person_id, entry);
 
@@ -389,8 +404,8 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         return out;
     }
 
-    sendState(person_id: number, entry: PeerData, sendOnpolite: boolean = true): PeerData {
-        if(entry.nameTransferd !== true && this.p2pHandler.isPolite(person_id) === sendOnpolite) {
+    sendState(person_id: number, entry: PeerData): PeerData {
+        if(!entry.nameTransferd ) {
             const sendObj = JSON.stringify({name: this.state.username, 
                                             screenShared: this.state.screenShared, 
                                             video: this.state.deviceAndStream.stream.getVideoTracks()[0].enabled,
@@ -445,9 +460,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
     close() {
         this.p2pHandler.disconnectFromPeers();
 
-        for(const o of this.state.streams) {
-            this.state.streams.delete[o[0]];
-        }
+        this.state.streams.clear();
         this.p2pHandler.reset();
     }
 
@@ -547,6 +560,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         for(const person_id of this.state.mainVideoArea) {
 
             const stream = this.state.streams.get(person_id);
+
             const name  = stream.name != null ? stream.name : "Anon";
             const display = stream.video === false ? "flex" : "none";
             const color = Colors[name.length%6];

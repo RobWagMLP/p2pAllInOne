@@ -5,8 +5,8 @@ export class Signaling {
 
     onRecIceCand    : (candidate: RTCIceCandidate   , person_id: number) => void;
     onRoomInfo      : (userList:  Array<number>                        ) => void;
-    onOffer         : (offer : RTCSessionDescriptionInit, person_id: number) => void;
-    onAnswer        : (answer: RTCSessionDescriptionInit, person_id: number) => void;    
+    onOffer         : (offer : RTCSessionDescriptionInit, person_id: number, name: string) => void;
+    onAnswer        : (answer: RTCSessionDescriptionInit, person_id: number, name: string) => void;    
     onOrder         : (order : string                                  ) => void;      
     onStatus        : (status: string                                  ) => void;
     onOpen          : (                                                ) => void;
@@ -55,11 +55,11 @@ export class Signaling {
                     }
                     break;
                     case OutgoingRequestType.Offer: {
-                        this.onOffer(dataobj.offer, dataobj.person_id);
+                        this.onOffer(dataobj.offer, dataobj.person_id, dataobj.name);
                     }
                     break;
                     case OutgoingRequestType.Answer: {
-                        this.onAnswer(dataobj.answer, dataobj.person_id);
+                        this.onAnswer(dataobj.answer, dataobj.person_id, dataobj.name);
                     }
                     break;
                     case OutgoingRequestType.IceCandidate: {
@@ -96,11 +96,11 @@ export class Signaling {
         this.onRecIceCand = method;
     }
 
-    addOfferListener(method: (offer : RTCSessionDescriptionInit, person_id: number) => void) {
+    addOfferListener(method: (offer : RTCSessionDescriptionInit, person_id: number, name: string) => void) {
         this.onOffer = method;
     }
 
-    addAnswerListener(method: (answer : RTCSessionDescriptionInit, person_id: number) => void) {
+    addAnswerListener(method: (answer : RTCSessionDescriptionInit, person_id: number, name: string) => void) {
         this.onAnswer = method;
     }
 

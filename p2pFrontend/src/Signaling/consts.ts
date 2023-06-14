@@ -10,3 +10,5 @@ export const Colors = [
     '#006400',
     '#d2691e'
 ];
+
+export const NEGIOTATION_TRACK_COUNT = 2;

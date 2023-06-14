@@ -3,7 +3,7 @@ import { getIceServer } from "../Helper/util";
 import { Signaling } from "./signaling";
 import { Storage }from "../Helper/storage"
 import { IncomingRequestType } from "./enums";
-import { END_IF_FILE_MSG, MAX_BYTE_PER_TRANSFER, PEER_CHAT_MESSAGE, PEER_INFO_SHARE } from "./consts";
+import { END_IF_FILE_MSG, MAX_BYTE_PER_TRANSFER, NEGIOTATION_TRACK_COUNT, PEER_CHAT_MESSAGE, PEER_INFO_SHARE } from "./consts";
 import { arrayBuffer } from "stream/consumers";
 import { FileBuilder } from "../Helper/filebuilder";
 
@@ -31,7 +31,7 @@ export class P2PHandler {
 
     private onOrder:                          (order: string) => void;
 
-    private onNewConnection:                  (con: RTCPeerConnection, person_id: number) => void;
+    private onNewConnection:                  (con: RTCPeerConnection, person_id: number, fromOffer: boolean) => void;
 
     private onInfoReceived:                   (rawjson: string, person_id: number) => void;
  
@@ -40,6 +40,10 @@ export class P2PHandler {
     private onChatMessageReceived:            (message: string, person_id:number) => void;
 
     private iceCandidateGatheredEvent:        (person_id: number)                 => void;
+
+    private onNameReceived:                   (name: string, person_id: number)   => void;
+
+    private onInfoChannelOpen:                (person_id: number)   => void;
 
     private statusHistory: Array<string>;
 
@@ -101,7 +105,7 @@ export class P2PHandler {
         this.onOrder = method;
     }
 
-    setOnNewConnectioncallback(method: (con: RTCPeerConnection, person_id: number) => void) {
+    setOnNewConnectioncallback(method: (con: RTCPeerConnection, person_id: number, fromOffer: boolean) => void) {
         this.onNewConnection = method;
     }
 
@@ -123,6 +127,14 @@ export class P2PHandler {
 
     setIceCandidateGatheredcallback(method: (person_id: number)                 => void) {
         this.iceCandidateGatheredEvent = method;
+    }
+
+    setonNameReceivedcallback(method: (name: string, person_id: number) => void) {
+        this.onNameReceived = method;
+    }
+
+    setOnInfoChannelOpencallback(method: (person_id: number)   => void) {
+        this.onInfoChannelOpen = method;
     }
 
     isPolite(person_id: number): boolean {
@@ -149,6 +161,10 @@ export class P2PHandler {
 
         connection.onnegotiationneeded = (ev: Event) => {
             try{
+                console.log(connection.getSenders().length);
+
+                const startNegiotation = connection.getSenders().length > NEGIOTATION_TRACK_COUNT;
+
                 this.negoiatation.get(person_id).sendingOffer = true;
                 this.sendSingleOffer(person_id);
             } catch(err: any) {
@@ -204,9 +220,11 @@ export class P2PHandler {
         connection.ondatachannel = (ev: RTCDataChannelEvent) => {
             const channel = ev.channel;
             const type    = channel.label;
-            console.log("receiving info");
             switch(type) {
                 case PEER_INFO_SHARE: {
+                        channel.onopen = (ev: Event) => {
+                            this.onInfoChannelOpen(person_id);
+                        }
                         channel.onmessage = (ev: MessageEvent) => {
                             this.onInfoReceived(ev.data, person_id);
                         }
@@ -289,8 +307,7 @@ export class P2PHandler {
 
             this.signaling.addOnCloseListener((reason: string) => {
                 console.log(`Socket connection closed due to ${reason}`);
-                this.canEnterRoom = false;
-                this.canReqestRoom = false;
+                this.signaling.connect(Storage.getInstance().getPersonID());
             })
 
             this.signaling.addonWebSocketErrorListener((ev: Event) => {
@@ -311,19 +328,23 @@ export class P2PHandler {
                 this.canEnterRoom = true;
 
                 for(const o of userList) {
+                    if(this.connections.has(o)) {
+                        continue;
+                    }
                     const connection = await this.setupConnection(o);
                     this.connections.set(o, connection);
 
-                    this.onNewConnection(connection, o);
+                    this.onNewConnection(connection, o, false);
                 }
             });
             
-            this.signaling.addAnswerListener(async (answer: RTCSessionDescriptionInit, person_id: number) => {
+            this.signaling.addAnswerListener(async (answer: RTCSessionDescriptionInit, person_id: number, name: string) => {
                 this.notify(`anser received from person ${person_id}`);
 
                 if(this.connections.has(person_id)) {
                     const connection = this.connections.get(person_id);
                     const remoteDescr = new RTCSessionDescription(answer);
+                    this.onNameReceived(name, person_id);
 
                     await connection.setRemoteDescription(remoteDescr);
 
@@ -346,14 +367,16 @@ export class P2PHandler {
                 }
             });
 
-            this.signaling.addOfferListener(async (offer: RTCSessionDescriptionInit, person_id: number) => {
-                this.notify(`offer received from person ${person_id}`);
+            this.signaling.addOfferListener(async (offer: RTCSessionDescriptionInit, person_id: number, name: string) => {
+                console.log(`offer received from person ${person_id}`);
                 
                 if(this.ignoreRequest(person_id)) {
                     console.log("Ignoring request", this.negoiatation);
                     return;
                 }
                 
+                this.onNameReceived(name, person_id);
+
                 let knownConnection = this.connections.has(person_id);
 
                 const connection = knownConnection ? this.connections.get(person_id) : await this.setupConnection(person_id);
@@ -369,9 +392,9 @@ export class P2PHandler {
                 this.connections.set(person_id, connection);
                 
                 if(!knownConnection) {
-                    this.onNewConnection(connection, person_id);
+                    this.onNewConnection(connection, person_id, true);
                 }
-                this.signaling.sendAnswer({type: IncomingRequestType.AcceptOfferFromPeers, answer: connection.localDescription, person_id: person_id});
+                this.signaling.sendAnswer({type: IncomingRequestType.AcceptOfferFromPeers, answer: connection.localDescription, person_id: person_id, name: Storage.getInstance().getUserName()});
 
             });
 
@@ -393,8 +416,9 @@ export class P2PHandler {
                 this.closePeer(person_id_close);
             })
 
+           
             this.signaling.connect(person_id);
-
+            
             this.initialized = true;
         }
     }
@@ -414,10 +438,10 @@ export class P2PHandler {
         if(this.connections.size > 0 ){
             const connection = this.connections.get(person_id);
             //const offer = await connection.createOffer();         
-
+            
             await connection.setLocalDescription();
 
-            this.signaling.sendSingleOffer({type: IncomingRequestType.SendOfferToSinglePeer, offer: connection.localDescription, person_id_receive: person_id});
+            this.signaling.sendSingleOffer({type: IncomingRequestType.SendOfferToSinglePeer, offer: connection.localDescription, person_id_receive: person_id, name: Storage.getInstance().getUserName()});
         }
     }
 
@@ -435,7 +459,7 @@ export class P2PHandler {
                     offer = o[1].localDescription
                 }
             }
-            this.signaling.sendOffer({type: IncomingRequestType.SendOfferToPeers, offer: offer});
+            this.signaling.sendOffer({type: IncomingRequestType.SendOfferToPeers, offer: offer, name: Storage.getInstance().getUserName()});
         }
     }
 
@@ -463,11 +487,16 @@ export class P2PHandler {
             dataChannel.send(info);
             return;
         }
+    }
+
+    setupInfoChannel(person_id: number) {
+        let dataChannel: RTCDataChannel = this.getOrCreateDataChannel(PEER_INFO_SHARE, person_id);
 
         const chnlmap = this.dataChannels.has(person_id) ? this.dataChannels.get(person_id) : new Map<string, RTCDataChannel>();
 
         dataChannel.onopen = (ev: Event) => {
-            dataChannel.send(info);
+            console.log("Info channel ready");
+            this.onInfoChannelOpen(person_id);
         }
 
         dataChannel.onmessage = (ev: MessageEvent) => {
@@ -520,17 +549,12 @@ export class P2PHandler {
     }
 
     reset() {
-        for(const o of this.negoiatation) {
-            this.negoiatation.delete(o[0]);
-        }
+        this.negoiatation.clear();
         for(const o of this.connections) {
             o[1].close();
-            delete o[1];
-            this.connections.delete(o[0]);
         }
-        for(const o of this.dataChannels) {
-            this.dataChannels.delete[o[0]];
-        }
+        this.connections.clear();
+        this.dataChannels.clear();
         this.signaling.disconnect();
     }
 

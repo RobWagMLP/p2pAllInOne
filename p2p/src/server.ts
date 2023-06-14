@@ -4,7 +4,9 @@ import * as dotenv from "dotenv";
 import { Socket } from "./socket/socket.ts";
 import { HTTPServer } from "./HtppServer/httpserver.ts";
 
-//dotenv.config({ path: '.env' });
+if( process.env.ENV == null) {
+    dotenv.config({ path: '.env' });
+}
 
 const port = process.env.APP_PORT ?? "4430";
 const host = process.env.APP_HOST ?? "127.0.0.1";

@@ -192,7 +192,7 @@ export class Socket {
                                     if(room != null) {
                                         for(const o of room) {
                                             if(o.user.person_id === person_id_receive) {
-                                                o.connection.send(JSON.stringify({type: OutgoingRequestType.Offer, offer: request.offer, person_id: user.person_id}));
+                                                o.connection.send(JSON.stringify({type: OutgoingRequestType.Offer, offer: request.offer, person_id: user.person_id, name: request.name}));
                                             }
                                         }
                                     }
@@ -207,10 +207,10 @@ export class Socket {
 
                             if(room_id > 0) {
                                 const room = this.peerManager.getRoom(room_id);
-
+                                console.log(request.name);
                                 for(const o of room) {
                                     if(o.user.person_id === request.person_id) {
-                                        o.connection.send(JSON.stringify({type: OutgoingRequestType.Answer, answer: request.answer, person_id: user.person_id}));
+                                        o.connection.send(JSON.stringify({type: OutgoingRequestType.Answer, answer: request.answer, person_id: user.person_id, name: request.name}, ));
                                     }
                                 }
                             } else {

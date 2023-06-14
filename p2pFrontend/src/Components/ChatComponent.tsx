@@ -1,5 +1,5 @@
-import React, { PureComponent, ReactElement, SyntheticEvent } from "react";
-import {  StyledTextField,  ChatWrapper, FileBox, MessageBox, Message, Name, Text, StyledLink } from "../Style/baseStyle.css";
+import React, { PureComponent, ReactElement } from "react";
+import {  StyledTextField,  ChatWrapper, MessageBox, Message, Name, Text, StyledLink } from "../Style/baseStyle.css";
 import { ChatMessage } from "../Signaling/interfaces";
 import { ChatMessageTypeEnum } from "../Signaling/enums";
 import { Colors } from "../Signaling/consts";
