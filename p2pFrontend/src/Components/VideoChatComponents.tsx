@@ -1,5 +1,5 @@
 import React, { ReactElement, SyntheticEvent } from "react";
-import { BottomArea, Circle, HoverBox, IconWrapperBig, IconWrapperSmall, InfoField, MenuItemWrapper, OffsetVideoArea, RightArea, RightMenuArea, SmallInfoField, SmallVideo, SmallVideoWrapper, VideoArea, VideoElement, VideoHeader, VideoMainGrid, VideoWrapper } from "../Style/baseStyle.css";
+import { BottomArea, Circle, HoverBox, IconWrapperBig, IconWrapperSmall, InfoField, LoadingSpinner, MenuItemWrapper, OffsetVideoArea, RightArea, RightMenuArea, SmallInfoField, SmallVideo, SmallVideoWrapper, VideoArea, VideoElement, VideoHeader, VideoMainGrid, VideoWrapper } from "../Style/baseStyle.css";
 import { P2PHandler } from "../Signaling/p2pHandler";
 import { Storage } from "../Helper/storage";
 import { audioOn, audioOff, cameraOn, cameraOff, settings, shareScreen, uploadFile, chat, stop, stopShareScreen } from "../Helper/icons";
@@ -568,15 +568,19 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                     display={display}
                     color={color}
                     text={displayName}>
-                    <VideoElement
-                        ref={() => {this.setVideoSrcObject(person_id)}}
-                        id={`video_stream_${person_id}`}
-                        key={`video_stream_${person_id}`}
-                        autoPlay={true}
-                       />                      
-                    <InfoField>
-                        {stream != null && stream.audio === false ? <IconWrapperBig> { audioOff() }</IconWrapperBig>: null}
-                    </InfoField>
+                    {stream.stream == null ? 
+                    <LoadingSpinner />     :
+                    <React.Fragment>
+                        <VideoElement
+                            ref={() => {this.setVideoSrcObject(person_id)}}
+                            id={`video_stream_${person_id}`}
+                            key={`video_stream_${person_id}`}
+                            autoPlay={true}
+                        />                      
+                        <InfoField>
+                            {stream != null && stream.audio === false ? <IconWrapperBig> { audioOff() }</IconWrapperBig>: null}
+                        </InfoField>
+                    </React.Fragment> }
                 </VideoWrapper>
             );
         }

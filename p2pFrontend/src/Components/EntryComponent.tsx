@@ -1,5 +1,5 @@
 import React, { SyntheticEvent } from "react";
-import { MainBox, HeaderBox, MiddleHeading, ContentBox, ErrBox, SmallHeading, SettingsBox, HoverBox, VideoPreviewBox, Footer } from "../Style/baseStyle.css";
+import { MainBox, HeaderBox, MiddleHeading, ContentBox, ErrBox, SmallHeading, SettingsBox, HoverBox, VideoPreviewBox, Footer, LoadingSpinner } from "../Style/baseStyle.css";
 import { theme } from "../Style/theme";
 import { Input } from "../Elements/input";
 import { Storage } from "../Helper/storage";

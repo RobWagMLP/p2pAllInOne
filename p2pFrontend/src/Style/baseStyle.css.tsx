@@ -447,3 +447,34 @@ export const SmallVideo = styled.video`
     z-index: 5000;
     text-align: center;
  `;
+
+ export const LoadingSpinner = styled.div`
+    display: inline-block;
+    margin: auto;
+    margin-top: 25%;
+    position: relative;
+    :after {
+        content: " ";
+        display: block;
+        border-radius: 50%;
+        width: 0;
+        height: 0;
+        box-sizing: border-box;
+        border: 64px solid white;
+        border-color: white transparent white transparent;
+        animation: lds-hourglass 1.2s infinite;
+    }
+    @keyframes lds-hourglass {
+      0% {
+        transform: rotate(0);
+        animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+      }
+      50% {
+        transform: rotate(900deg);
+        animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+      }
+      100% {
+        transform: rotate(1800deg);
+      }
+    }
+ `;
