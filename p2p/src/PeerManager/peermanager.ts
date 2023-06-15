@@ -32,13 +32,16 @@ export class PeerManager {
 
     addToRoomOrCreateRoom(room_id: number, connection: UserConnection) {
         const con: Array<UserConnection> = this.connectionMap.get(room_id) ?? [];
-        for(const o of con) {
-            if(o.user.person_id === connection.user.person_id)  {
+        for(const o in con) {
+            if(con[o].user.person_id === connection.user.person_id)  {
+                con[o].connection.close();
+                con[o] = connection;        
+                console.log("replacing connection ", room_id, connection.user.person_id)
+                this.connectionMap.set(room_id, con);
                 return;
             }
         }
         con.push(connection);
-
         this.connectionMap.set(room_id, con);
     }
 
