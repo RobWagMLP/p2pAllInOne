@@ -12,11 +12,12 @@ export class PeerManager {
     }
 
     addUser(user: User, req: IncomingMessage): boolean {
-        this.userMap.forEach((value: User, key: IncomingMessage) => {
-            if(value.person_id === user.person_id) {
+        for(const value of this.userMap) {
+            if(value[1].person_id === user.person_id) {
                 return false;
             }
-        });
+        }
+
         this.userMap.set(req, user);
         return true;
     }
@@ -103,5 +104,8 @@ export class PeerManager {
         }
         this.userMap.delete(req);
         console.log(this.userMap.size, this.connectionMap.size);
+        for(const o of this.userMap) {
+            console.log(o[1]);
+        }
     }
 }
