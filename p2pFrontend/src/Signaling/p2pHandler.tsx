@@ -45,6 +45,8 @@ export class P2PHandler {
 
     private onInfoChannelOpen:                (person_id: number)   => void;
 
+    private onChatOpen:                       (person_id: number)   => void;
+
     private statusHistory: Array<string>;
 
     private errorHistory:  Array<string>;
@@ -137,6 +139,10 @@ export class P2PHandler {
         this.onInfoChannelOpen = method;
     }
 
+    setOnChatOpencallback(method: (person_id: number) => void ) {
+        this.onChatOpen = method;
+    }
+
     isPolite(person_id: number): boolean {
         return this.negoiatation.get(person_id).polite;
     }
@@ -220,6 +226,7 @@ export class P2PHandler {
         connection.ondatachannel = (ev: RTCDataChannelEvent) => {
             const channel = ev.channel;
             const type    = channel.label;
+
             switch(type) {
                 case PEER_INFO_SHARE: {
                         channel.onopen = (ev: Event) => {
@@ -231,6 +238,9 @@ export class P2PHandler {
                     }
                     break;
                 case PEER_CHAT_MESSAGE: {
+                        channel.onopen = (ev: Event) => {
+                            this.onChatOpen(person_id);
+                        }
                         channel.onmessage = (ev: MessageEvent) => {
                             this.onChatMessageReceived(ev.data, person_id);
                         }
@@ -508,14 +518,13 @@ export class P2PHandler {
     }
 
     setupChatChannel(person_id: number) {
-        const con = this.connections.get(person_id);
-
         let dataChannel: RTCDataChannel = this.getOrCreateDataChannel(PEER_CHAT_MESSAGE, person_id);
 
         const chnlmap = this.dataChannels.has(person_id) ? this.dataChannels.get(person_id) : new Map<string, RTCDataChannel>();
 
         dataChannel.onopen = (ev: Event) => {
-            console.log("Chat channel ready")
+            console.log("Chat channel ready");
+            this.onChatOpen(person_id);
         }
 
         dataChannel.onmessage = (ev: MessageEvent) => {

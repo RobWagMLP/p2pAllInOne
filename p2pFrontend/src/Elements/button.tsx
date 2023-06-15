@@ -13,8 +13,11 @@ export const Button: FunctionComponent< IProps> = (props: IProps) => {
     return (
         <StyledButton
             disabled={props.disabled}
-            onClick={() => props.onClick()}
-        >
+            onClick={() => {
+                if(!props.disabled) {
+                    props.onClick()
+                }
+            }}>
             {props.text}
         </StyledButton>
     )

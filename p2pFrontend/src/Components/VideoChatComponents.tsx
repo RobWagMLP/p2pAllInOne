@@ -40,6 +40,7 @@ interface IState {
     chatHistory: Array<ChatMessage>;
 
     showChat?: boolean;
+    canChat?:  boolean;
 }
 
 export class VideoChatComponent extends React.Component<IProps, IState> {
@@ -70,7 +71,8 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             screenShared: false,
             senders: new Map<number, Array<RTCRtpSender>>(),
             chatHistory: [],
-            showChat: true
+            showChat: true,
+            canChat: false
 
         }
 
@@ -270,6 +272,12 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
             streams.set(person_id, data);
             this.setState({
                 streams: streams
+            })
+        })
+
+        this.p2pHandler.setOnChatOpencallback((person_id: number) => {
+            this.setState({
+                canChat: true
             })
         })
 
@@ -791,6 +799,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                     </OffsetVideoArea>
                     {this.state.showChat ? 
                         <ChatComponent 
+                            disabled={!this.state.canChat}
                             messages={this.state.chatHistory}
                             onNewMessage={(message: string) => {
                                 const hist = this.state.chatHistory;

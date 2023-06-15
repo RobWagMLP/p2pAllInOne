@@ -8,6 +8,7 @@ import { Colors } from "../Signaling/consts";
 interface IProps {
     messages: Array<ChatMessage>;
     onNewMessage: (message: string) => void;
+    disabled?: boolean;
 }
 
 export class ChatComponent extends PureComponent<IProps> {
@@ -81,6 +82,7 @@ export class ChatComponent extends PureComponent<IProps> {
                     {this.getMessageBoxContent()}
                 </MessageBox>
                 <StyledTextField
+                    disabled={this.props.disabled === true}
                     placeholder="Type something"
                     id="chatbox_input_area"
                 />
