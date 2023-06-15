@@ -265,7 +265,7 @@ export const StyledButton = styled.div<{disabled? : boolean}>`
 export const VideoMainGrid = styled.div`
     display: grid;
     grid-template-columns: [first]   80% [line-2] 20% [end];
-    grid-template-rows   : [first-r] 5% [row-2] 85% [row-3] 10% [end-row];
+    grid-template-rows   : [first-r] 5% [row-2] 88% [row-3] 7% [end-row];
     background-color: ${theme.font.base_color};
     height: 100vh;
     width: 100vw;
@@ -448,11 +448,12 @@ export const SmallVideo = styled.video`
     text-align: center;
  `;
 
- export const LoadingSpinner = styled.div`
+ export const LoadingSpinner = styled.div<{maxHeight?: string}>`
     display: inline-block;
     margin: auto;
     margin-top: 25%;
     position: relative;
+    max-height: ${props => props.maxHeight != null ? props.maxHeight : '100%'};
     :after {
         content: " ";
         display: block;
@@ -478,3 +479,18 @@ export const SmallVideo = styled.video`
       }
     }
  `;
+
+ export const NoOnHereBox = styled.div`
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+ `;
+
+ export const NoOnHereText = styled.div`
+    font-weight: 500;
+    color: white;
+    font-family: ${theme.font.font_family};
+    font-size: 2vw;
+    margin: auto;
+`;

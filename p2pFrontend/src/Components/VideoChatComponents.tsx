@@ -1,5 +1,5 @@
 import React, { ReactElement, SyntheticEvent } from "react";
-import { BottomArea, Circle, HoverBox, IconWrapperBig, IconWrapperSmall, InfoField, LoadingSpinner, MenuItemWrapper, OffsetVideoArea, RightArea, RightMenuArea, SmallInfoField, SmallVideo, SmallVideoWrapper, VideoArea, VideoElement, VideoHeader, VideoMainGrid, VideoWrapper } from "../Style/baseStyle.css";
+import { BottomArea, Circle, HoverBox, IconWrapperBig, IconWrapperSmall, InfoField, LoadingSpinner, MenuItemWrapper, NoOnHereBox, NoOnHereText, OffsetVideoArea, RightArea, RightMenuArea, SmallInfoField, SmallVideo, SmallVideoWrapper, VideoArea, VideoElement, VideoHeader, VideoMainGrid, VideoWrapper } from "../Style/baseStyle.css";
 import { P2PHandler } from "../Signaling/p2pHandler";
 import { Storage } from "../Helper/storage";
 import { audioOn, audioOff, cameraOn, cameraOff, settings, shareScreen, uploadFile, chat, stop, stopShareScreen } from "../Helper/icons";
@@ -565,46 +565,60 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         const width  = participans > 1 ? 'calc(50% - 32px)' : 'calc(100% - 32px)';
         const height = participans > 2 ? 'calc(50% - 32px)' : 'calc(100% - 32px)';
 
-        for(const person_id of this.state.mainVideoArea) {
-
-            const stream = this.state.streams.get(person_id);
-
-            const name  = stream.name != null ? stream.name : "Anon";
-            const display = stream.video === false ? "flex" : "none";
-            const color = Colors[name.length%6];
-            let displayName = "";
-
-            if(stream.video === false) {
-                displayName = this.getInitials(name);
-            }
-
+        if(this.state.mainVideoArea.length === 0){
             out.push(
-                <VideoWrapper
-                    onDoubleClick={(event: SyntheticEvent) => {
-                        event.stopPropagation();
-                        event.preventDefault();
-                        this.toggleVideoToMain(person_id);
-                    }}
-                    height={height}
-                    width={width}
-                    display={display}
-                    color={color}
-                    text={displayName}>
-                    {stream.stream == null ? 
-                    <LoadingSpinner />     :
-                    <React.Fragment>
-                        <VideoElement
-                            ref={() => {this.setVideoSrcObject(person_id)}}
-                            id={`video_stream_${person_id}`}
-                            key={`video_stream_${person_id}`}
-                            autoPlay={true}
-                        />                      
-                        <InfoField>
-                            {stream != null && stream.audio === false ? <IconWrapperBig> { audioOff() }</IconWrapperBig>: null}
-                        </InfoField>
-                    </React.Fragment> }
-                </VideoWrapper>
-            );
+                <NoOnHereBox>
+                    <LoadingSpinner maxHeight={"50%"}/>
+                    <NoOnHereText>
+                        ... Seems there's noone here yet.
+                    </NoOnHereText>
+                </NoOnHereBox>
+            )
+        }
+
+        for(const person_id of this.state.mainVideoArea) {
+            try{
+                const stream = this.state.streams.get(person_id);
+
+                const name  = stream.name != null ? stream.name : "Anon";
+                const display = stream.video === false ? "flex" : "none";
+                const color = Colors[name.length%6];
+                let displayName = "";
+
+                if(stream.video === false) {
+                    displayName = this.getInitials(name);
+                }
+
+                out.push(
+                    <VideoWrapper
+                        onDoubleClick={(event: SyntheticEvent) => {
+                            event.stopPropagation();
+                            event.preventDefault();
+                            this.toggleVideoToMain(person_id);
+                        }}
+                        height={height}
+                        width={width}
+                        display={display}
+                        color={color}
+                        text={displayName}>
+                        {stream.stream == null ? 
+                        <LoadingSpinner />     :
+                        <React.Fragment>
+                            <VideoElement
+                                ref={() => {this.setVideoSrcObject(person_id)}}
+                                id={`video_stream_${person_id}`}
+                                key={`video_stream_${person_id}`}
+                                autoPlay={true}
+                            />                      
+                            <InfoField>
+                                {stream != null && stream.audio === false ? <IconWrapperBig> { audioOff() }</IconWrapperBig>: null}
+                            </InfoField>
+                        </React.Fragment> }
+                    </VideoWrapper>
+                );
+            } catch(err: any) {
+                console.log(err);
+            }
         }
         return out;
     }
@@ -617,6 +631,7 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
                 display={this.state.deviceAndStream.stream.getVideoTracks()[0].enabled ? 'none' : 'flex'}
                 color={Colors[this.state.username.length%6]}
                 text={this.getInitials(this.state.username)}
+                key="video_stream_self_wrapper"
             >
                 <SmallVideo 
                     id="video_stream_self"
@@ -630,38 +645,43 @@ export class VideoChatComponent extends React.Component<IProps, IState> {
         );
 
         for(const person_id of this.state.offsetVideoArea) {
-            const stream = this.state.streams.get(person_id);
-            const name  = stream.name != null ? stream.name : "Anon";
-            const display = stream.video === false ? "flex" : "none";
-            const color = Colors[name.length%6];
-            let displayName = "";
+            try{
+                const stream = this.state.streams.get(person_id);
+                const name  = stream.name != null ? stream.name : "Anon";
+                const display = stream.video === false ? "flex" : "none";
+                const color = Colors[name.length%6];
+                let displayName = "";
 
-            if(stream.video === false) {
-                displayName = this.getInitials(name);
+                if(stream.video === false) {
+                    displayName = this.getInitials(name);
+                }
+                out.push(
+                    <SmallVideoWrapper
+                        display={display}
+                        color={color}
+                        text={displayName}
+                        key={`video_stream_${person_id}_wrapper`}
+                        onDoubleClick={(event: SyntheticEvent) => {
+                            event.stopPropagation();
+                            event.preventDefault();
+                            this.toggleVideoToMain(person_id);
+                        }}>
+                        <SmallVideo 
+                            ref={() => {this.setVideoSrcObject(person_id)}}
+                            id={`video_stream_${person_id}`}
+                            key={`video_stream_${person_id}`}
+                            autoPlay={true}
+                        />
+                        <SmallInfoField>
+                            {stream != null ? stream.name : person_id}
+                            {" "}
+                            {stream != null && stream.audio === false ? <IconWrapperSmall> { audioOff() } </IconWrapperSmall> : null}
+                    </SmallInfoField>
+                    </SmallVideoWrapper>
+                );
+            } catch(err: any) {
+                console.log(err);
             }
-            out.push(
-                <SmallVideoWrapper
-                    display={display}
-                    color={color}
-                    text={displayName}
-                    onDoubleClick={(event: SyntheticEvent) => {
-                    event.stopPropagation();
-                    event.preventDefault();
-                    this.toggleVideoToMain(person_id);
-                }}>
-                    <SmallVideo 
-                        ref={() => {this.setVideoSrcObject(person_id)}}
-                        id={`video_stream_${person_id}`}
-                        key={`video_stream_${person_id}`}
-                        autoPlay={true}
-                    />
-                     <SmallInfoField>
-                        {stream != null ? stream.name : person_id}
-                        {" "}
-                        {stream != null && stream.audio === false ? <IconWrapperSmall> { audioOff() } </IconWrapperSmall> : null}
-                </SmallInfoField>
-                </SmallVideoWrapper>
-            );
         }
         return out;
     }

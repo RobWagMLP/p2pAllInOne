@@ -38,7 +38,7 @@ export class ChatComponent extends PureComponent<IProps> {
                         {"status: "}:
                     </Name>
                     <Text>
-                        {"Chat initialized"}
+                        {this.props.disabled ? "...initializing" : "Chat initialized"}
                     </Text>
                 </Message>
         )
@@ -50,10 +50,12 @@ export class ChatComponent extends PureComponent<IProps> {
             out.push(
                 <Message key={o.name + i}>
                     <Name
+                        key={`name_${o.name + i}`}
                         color={Colors[o.name.length%6]}>
                         {o.name}:
                     </Name>
-                    <Text>
+                    <Text
+                        key={`text_${o.name + i}`}>
                         {o.type === ChatMessageTypeEnum.Message ? o.message
                                                                 : <StyledLink download={o.message} href={URL.createObjectURL(o.blob)}>
                                                                     {o.message}

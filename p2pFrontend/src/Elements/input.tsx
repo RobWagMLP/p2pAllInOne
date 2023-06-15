@@ -6,7 +6,8 @@ interface IProps {
     placeholder: string;
     text?: string;
     id: string;
-    callback: (value: {id: string; text: string}) => void
+    callback: (value: {id: string; text: string}) => void;
+    onEnter: () => void;
 }
 
 interface IState {
@@ -20,6 +21,15 @@ export class Input extends React.Component<IProps, IState> {
         this.state = {
             text: props.text == null ? "" : props.text
         }   
+    }
+
+    componentDidMount(): void {
+        const el = document.getElementById(this.props.id) as HTMLTextAreaElement;
+        el.addEventListener('keyup', (ev: KeyboardEvent) => {
+            if(ev.key === 'Enter') {
+                this.props.onEnter();
+            }
+        })
     }
 
     render(){

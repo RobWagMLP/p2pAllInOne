@@ -10,6 +10,7 @@ import { Button } from "../Elements/button";
 import { Navigate } from "react-router";
 import withRouter from "../hocs/withRouter";
 import { VideoChatComponent } from "./VideoChatComponents";
+import { INIT_NAMES } from "../Signaling/consts";
 
 interface IProps {
     room_id: number;
@@ -32,9 +33,6 @@ interface IState {
 
 class EntryComponent extends React.Component<IProps, IState> {
 
-        private devicEntryHeight = 30;
-        private deviceOverlayOffset= 140;
-
         p2pHandler: P2PHandler;
    
         constructor(props: IProps) {
@@ -51,7 +49,7 @@ class EntryComponent extends React.Component<IProps, IState> {
                 cam  : true,
                 audio: true,
                 mediaAvailable: true,
-                name: "",
+                name: INIT_NAMES[Math.floor(26*Math.random())],
                 settings: {},
                 devices: [],
                 socketAvailable: false,
@@ -217,6 +215,12 @@ class EntryComponent extends React.Component<IProps, IState> {
                                                 name: value.text
                                             })
                                         }}
+                                    text={this.state.name}
+                                    onEnter={() => {
+                                        if(this.state.mediaAvailable && this.state.socketAvailable && this.state.name != null && this.state.name.length >= 2) {
+                                            this.onStart();
+                                        }
+                                    }}
                                     label="Enter your name"
                                     placeholder="Name" />
                             </div>
@@ -267,7 +271,7 @@ class EntryComponent extends React.Component<IProps, IState> {
                                     {settings()}
                                 </HoverBox>
                             </SettingsBox>
-                            <Button disabled={!this.state.mediaAvailable || !this.state.socketAvailable} text={"Start"} onClick={this.onStart}/>
+                            <Button disabled={!this.state.mediaAvailable || !this.state.socketAvailable || this.state.name == null || this.state.name.length < 2} text={"Start"} onClick={this.onStart}/>
                             <ErrBox>
                                 {this.state.error}
                             </ErrBox>

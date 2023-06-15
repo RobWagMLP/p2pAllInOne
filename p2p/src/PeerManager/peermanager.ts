@@ -14,7 +14,7 @@ export class PeerManager {
     addUser(user: User, req: IncomingMessage): boolean {
         for(const value of this.userMap) {
             if(value[1].person_id === user.person_id) {
-                return false;
+                this.userMap.delete(value[0]);
             }
         }
 

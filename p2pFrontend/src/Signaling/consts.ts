@@ -10,5 +10,33 @@ export const Colors = [
     '#006400',
     '#d2691e'
 ];
+export const INIT_NAMES = [
+    "Anton Achsel",
+    "Berti Brotmann",
+    "Chris Chauffeur",
+    "Dörte Damenbart",
+    "Emil Ehrenbock",
+    "Friedel Fruchtfee",
+    "Gunter Gurgelsieb",
+    "Hans Haufen",
+    "Ines Immel",
+    "Jürgen Jodelbaum",
+    "Klaus Kleber",
+    "Ludwig Leberhaken",
+    "Manfred Mühsam",
+    "Niko Neuwitz",
+    "Olaf Ohnebart",
+    "Paula Ponte",
+    "Quinn Quiesel",
+    "Richard Rabenschwarz",
+    "Sett Seemann",
+    "Tim Teutone",
+    "Udo Ulfkotte",
+    "Viktor Vierkant",
+    "Waldemar Waldbrand",
+    "Xavier Xantippe",
+    "Yvonne Yvonnersman",
+    "Zoe Zierlich"
+];
 
 export const NEGIOTATION_TRACK_COUNT = 2;
